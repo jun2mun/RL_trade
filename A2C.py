@@ -17,7 +17,7 @@ parser.add_argument('--critic_lr', type=float, default=0.001)
 args = parser.parse_args()
 
 from src.utils import timestamp
-
+from keras.models import save_model
 
 class Actor:
     def __init__(self, state_dim, action_dim):
@@ -49,6 +49,7 @@ class Actor:
         grads = tape.gradient(loss, self.model.trainable_variables)
         self.opt.apply_gradients(zip(grads, self.model.trainable_variables))
         return loss
+
 
 
 class Critic:

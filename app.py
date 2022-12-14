@@ -12,6 +12,10 @@ from src.agent import Agent,AC2_Agent
 from src.utils import add_technical_features, load_data, results_df, plot_trades, get_portfolio_stats, plot_benchmark, \
   plot_benchmark2, load_data2
 
+from tensorflow.python.client import device_lib
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 @st.cache
 def load_data_2(symbol, window_size):
   data_ = add_technical_features(load_data2(symbol), window=window_size).sort_values(by=['Date'], ascending=True)

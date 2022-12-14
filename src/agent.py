@@ -8,10 +8,10 @@ from keras.losses import Huber
 from keras.models import clone_model
 from keras.optimizers import Adam
 #from keras.saving.save import load_model tf 2.0.0
-from keras.saving.legacy.save import load_model # tf 2.11.0
+from keras.models import load_model # tf 2.11.0
 
-from src.utils import timestamp
-
+from utils import timestamp
+import math
 
 class Agent:
   def __init__(self, state_size, model_type = 'ddqn', pretrained = False, model_name = None, window_size = 10, reset_target_weight_interval = 10):
@@ -54,6 +54,7 @@ class Agent:
   def save(self, episode):
     if self.model_name is None:
       self.model_name = f'{self.model_type}_{timestamp()}'
+    print(f'================={self.model.get_weights()}=====================')
     self.model.save(f"models/{self.model_name}_{episode}")
 
   def model_(self):
@@ -146,18 +147,18 @@ class Actor:
     def __init__(self, state_dim, action_dim):
         self.state_dim = state_dim
         self.action_dim = action_dim
-        self.model = self.create_model()
         self.opt = Adam(lr=args['actor_lr'])
         self.lr = 0.001
-        self.optimizer = Adam(lr = self.lr)
         self.loss = Huber
+        self.model = self.create_model()
+        print('=================',self.opt)
 
     def create_model(self):
         model = Sequential()
         model.add(Dense(units=32, activation="relu", input_shape=(self.state_dim,)))
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=self.action_dim,activation='softmax'))
-        #model.compile(optimizer=tf.keras.optimizers.Adam(lr =0.001),loss=Huber)
+        model.compile(optimizer=self.opt, loss=self.loss())
         return model
 
     def compute_loss(self, actions, logits, advantages):
@@ -181,8 +182,9 @@ class Actor:
 class Critic:
     def __init__(self, state_dim):
         self.state_dim = state_dim
-        self.model = self.create_model()
         self.opt = tf.keras.optimizers.Adam(args['critic_lr'])
+        self.loss = Huber
+        self.model = self.create_model()
 
     def create_model(self):
         model = tf.keras.Sequential()
@@ -190,6 +192,7 @@ class Critic:
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=1,activation='linear'))
+        model.compile(optimizer=self.opt, loss=self.loss())
         #model.compile(optimizer=tf.keras.optimizers.Adam(lr =0.001),loss=Huber)
         return model
 
@@ -219,13 +222,14 @@ class AC2_Agent:
         self.model_name = model_name
         self.actor = Actor(self.state_size, self.action_size)
         self.critic = Critic(self.state_size)
-
+        self.custom_objects = {"huber": Huber}
         self.rar = 0.99 # Epsilon / Random Action Rate
         self.window_size = window_size
+        self.loss = Huber
 
-
-
+        
         if pretrained and self.model_name is not None:
+            print("model loaded -================")
             self.actor.model,self.critic.model = self.load()
 
         self.n_iter = 1
@@ -237,6 +241,7 @@ class AC2_Agent:
         self.cirtic_target_model = clone_model(self.critic.model)
         self.cirtic_target_model.set_weights(self.critic.model.get_weights())
         
+
     def td_target(self, reward, next_state, done):
         if done:
             return reward
@@ -254,14 +259,17 @@ class AC2_Agent:
         return batch
 
     def load(self):
-        actor_model = load_model(f"models/A2C_actor_{self.model_name}.h5")#, custom_objects=self.custom_objects, compile=False)
-        critic_model = load_model(f"models/A2C_critic_{self.model_name}.h5")
-        #model.compile(optimizer=self.actor.opt, loss=self.actor.train())
+        actor_model = load_model(f"models/A2C_actor_{self.model_name}.h5", custom_objects=self.custom_objects, compile=False)#, custom_objects=self.custom_objects, compile=False)
+        critic_model = load_model(f"models/A2C_critic_{self.model_name}.h5",  custom_objects=self.custom_objects, compile=False)
+        actor_model.compile(optimizer=self.actor.opt, loss=self.loss())
+        actor_model.compile(optimizer=self.actor.opt, loss=self.loss())
         return actor_model,critic_model
 
     def save(self, episode):
         if self.model_name is None:
             self.model_name = f'{self.model_type}_{timestamp()}'
+        print(f'================={self.actor_target_model.get_weights()}=============')
+        print(f'================={self.critic.model.get_weights()}===============')
         self.actor.model.save(f"models/A2C_actor_{self.model_name}.h5")
         self.critic.model.save(f"models/A2C_critic_{self.model_name}.h5")
 
@@ -269,23 +277,21 @@ class AC2_Agent:
         if self.start:
             self.start = False
             return 1
+
         probs = self.actor.model.predict(state)
-        print(f' what is : {probs[0][0]}')
-        if probs[0][0] is not 'nan':
-            print(probs,"============== arg max : ",np.argmax(probs[0]))
-            return np.argmax(probs[0])
+        #print(f' state is : {state}')
+        print(f' what is : {probs[0]}')
+        #print(f'type is :{np.isnan(probs[0][0])}')
+        if np.isnan(probs[0][0]) == True:
+            print(random.randrange(self.action_size))
+            return  random.randrange(self.action_size)
             
         else:
+          #print(f'================ {probs[0]} ================')
           _action = np.random.choice(self.action_size, p=probs[0])
           print(probs,"============== arg max : ",_action)
           return _action
         
-
-
-
-
-
-
 
 
 

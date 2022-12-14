@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 from tqdm import tqdm
-from src.utils import get_state, format_currency, format_position, normalize
+from utils import get_state, format_currency, format_position, normalize
 import pdb
 import streamlit as st
 '''
@@ -210,7 +210,9 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
       reward = calc_reward(pct_change[t] * 100, net_holdings)
       total_profit += reward
 
+      #print(f'=========={agent.actor.model.get_weights()}==============')
 
+      #print(f'=========={agent.critic.model.get_weights()}==============')
 
       if not done:
         next_state = get_state(normed_data, t + 1)
@@ -223,7 +225,7 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
         td_target = agent.td_target(reward = reward * 0.01, next_state=next_state, done=done)
         advantage = advatnage(
           td_target, agent.critic.model.predict(state))
-
+ 
         
         state_batch.append(state)
         action_batch.append(action)
@@ -257,9 +259,6 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
 
           return (episode, episode_count, total_profit, np.array(average_loss).mean())
 
-
-
-
 def evaluate_model_A2C(agent, data, verbose, window_size = 10):
   total_profit = 0
   num_observations = len(data)
@@ -279,6 +278,9 @@ def evaluate_model_A2C(agent, data, verbose, window_size = 10):
 
 
     state = get_state(normed_data, t)
+    print(f'================ {normed_data} =============')
+    
+    print(f'================ {state} =============')
     action = agent.action(state, evaluation = True)
   
 
@@ -313,5 +315,4 @@ def evaluate_model_A2C(agent, data, verbose, window_size = 10):
         state = next_state
 
     if done: return total_profit, history, shares_history
-
 

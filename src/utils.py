@@ -7,7 +7,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from src.technical_indicators import (
+from technical_indicators import (
   indicators_dict,
   add_momentum_indicators,
   add_trend_indicators,
