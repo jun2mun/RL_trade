@@ -69,10 +69,10 @@ symbol = st.sidebar.selectbox('Stock Symbol:', symbols)
 
 index = load_data_(symbol, 10).index
 start_date, end_date, window_size = sidebar(index)
-submit = st.sidebar.button('Run')
-submit2 = st.sidebar.button('Test')
-submit3 = st.sidebar.button('jun-ac2 train')
-submit4 = st.sidebar.button('jun-ac2 test')
+#submit = st.sidebar.button('Run')
+#submit2 = st.sidebar.button('Test')
+submit3 = st.sidebar.button('train')
+submit4 = st.sidebar.button('Test')
 if st.sidebar.checkbox('How Does This Work?'):
   how_it_works()
 
@@ -98,7 +98,7 @@ if submit4:
   st.plotly_chart(fig)
   """  ================== """
   
-  model_name = 'AAPL'
+  model_name = 'TSLA'
   dqn_agent = load_model(filtered_data.shape[1], model_name = model_name)
   dqn_profit, dqn_history, dqn_shares = evaluate(dqn_agent, filtered_data, window_size = window_size, verbose = False)
   dqn_results = results_df(filtered_data.price, dqn_shares, starting_value = 1_000)
@@ -161,83 +161,4 @@ if submit3: # jun ac2 train
 
   st.write('end')
   #profit, history, shares = evaluate(agent, filtered_data, window_size = window_size, verbose = False)
-
-if submit2: #TEST
-  model_name = symbol # 주식
-  data = load_data_2(symbol, window_size)
-  filtered_data = filter_data_by_date(data, start_date, end_date)
-
-  agent = load_model(filtered_data.shape[1], model_name = model_name)
-  profit, history, shares = evaluate(agent, filtered_data, window_size = window_size, verbose = False)
-  results = results_df(filtered_data.price, shares, starting_value = 1_000)
-  cum_return, avg_daily_returns, std_daily_returns, sharpe_ratio = get_portfolio_stats(results.Port_Vals)
-
-  st.write(f'### Cumulative Return for {symbol}: {np.around(cum_return * 100, 2)}%')
-  fig = plot_trades(filtered_data, results.Shares, symbol)
-  st.plotly_chart(fig)
-
-  ## Benchmarking
-  ## BUY & hold, 휴리스틱 모델과 비교
-  
-  baseline_results, heuristic_results = benchmarks(symbol, filtered_data) 
-
-  cum_return_base, avg_daily_returns_base, std_daily_returns_base, sharpe_ratio_base = get_portfolio_stats(baseline_results.Port_Vals)
-  cum_return_heuristic, avg_daily_returns_heuristic, std_daily_returns_heuristic, sharpe_ratio_heuristic = get_portfolio_stats(heuristic_results.Port_Vals)
-
-  benchmark = pd.DataFrame(columns = ['Cumulative Return', 'Avg Daily Returns', 'Std Dev Daily Returns', 'Sharpe Ratio'], index = ['Double DQN', 'Buy & Hold', 'Heuristic'])
-  benchmark.loc['Double DQN'] = [cum_return * 100, avg_daily_returns * 100, std_daily_returns, sharpe_ratio]
-  benchmark.loc['Heuristic' ] = [cum_return_heuristic * 100, avg_daily_returns_heuristic * 100, std_daily_returns_heuristic, sharpe_ratio_heuristic]
-  benchmark.loc['Buy & Hold'] = [cum_return_base * 100, avg_daily_returns_base * 100, std_daily_returns_base, sharpe_ratio_base]
-
-
-  st.table(benchmark.astype('float64').round(4))
-
-  fig = plot_benchmark(baseline_results, heuristic_results, results)
-  st.plotly_chart(fig)
-
-  st.header('Raw Data')
-  st.subheader('Double DQN')
-  st.dataframe(results)
-
-  st.subheader('Buy & Hold')
-  st.write(baseline_results)
-
-  st.subheader('Heuristic')
-  st.write(heuristic_results)
-
-
-  ## Benchmarking2
-
-  heuristic_results = get_heuristic_results(symbol, filtered_data)
-  cum_return_heuristic, avg_daily_returns_heuristic, std_daily_returns_heuristic, sharpe_ratio_heuristic = get_portfolio_stats(heuristic_results.Port_Vals)
-
-  benchmark = pd.DataFrame(columns = ['Cumulative Return', 'Avg Daily Returns', 'Std Dev Daily Returns', 'Sharpe Ratio'], index = ['Double DQN', 'Buy & Hold', 'Heuristic'])
-  benchmark.loc['Double DQN'] = [cum_return * 100, avg_daily_returns * 100, std_daily_returns, sharpe_ratio]
-  benchmark.loc['Heuristic' ] = [cum_return_heuristic * 100, avg_daily_returns_heuristic * 100, std_daily_returns_heuristic, sharpe_ratio_heuristic]
-
-
-  st.table(benchmark.astype('float64').round(4))
-
-  fig = plot_benchmark2(heuristic_results, results)
-  st.plotly_chart(fig)
-
-  st.header('Raw Data')
-  st.subheader('Double DQN')
-  st.dataframe(results)
-
-  st.subheader('Heuristic')
-  st.write(heuristic_results)
-
-if submit: #TEST
-  model_name = symbol
-  data = load_data_(symbol, window_size)
-  filtered_data = filter_data_by_date(data, start_date, end_date)
-
-  agent = load_model(filtered_data.shape[1], model_name = model_name)
-  profit, history, shares = evaluate(agent, filtered_data, window_size = window_size, verbose = False)
-  results = results_df(filtered_data.price, shares, starting_value = 1_000)
-  cum_return, avg_daily_returns, std_daily_returns, sharpe_ratio = get_portfolio_stats(results.Port_Vals)
-
-  st.write(f'### Cumulative Return for {symbol}: {np.around(cum_return * 100, 2)}%')
-  fig = plot_trades(filtered_data, results.Shares, symbol)
-  st.plotly_chart(fig)
+ 
