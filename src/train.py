@@ -67,10 +67,10 @@ if __name__ == '__main__':
 
   coloredlogs.install(level = "DEBUG")
 
-  #if K.backend() == "tensorflow":
-  #  logging.debug("Switching --> TensorFlow for CPU")
-  #  os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-  #  os.environ['KMP_DUPLICATE_LIB_OK']='True'
+  if K.backend() == "tensorflow":
+    logging.debug("Switching --> TensorFlow for CPU")
+    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
   print("hello")
   try:
     run(training_stock, validation_stock, window_size, batch_size, episode_count,

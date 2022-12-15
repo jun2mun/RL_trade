@@ -10,7 +10,7 @@ from keras.optimizers import Adam
 #from keras.saving.save import load_model tf 2.0.0
 from keras.models import load_model # tf 2.11.0
 
-from utils import timestamp
+from src.utils import timestamp
 import math
 
 class Agent:
@@ -226,20 +226,21 @@ class AC2_Agent:
         self.rar = 0.99 # Epsilon / Random Action Rate
         self.window_size = window_size
         self.loss = Huber
-
         
         if pretrained and self.model_name is not None:
             print("model loaded -================")
             self.actor.model,self.critic.model = self.load()
+            #print(f'loaded weihgt : {self.actor_model.get_weights()}')
+            print("========================================")
+          
 
         self.n_iter = 1
         self.reset_interval = reset_target_weight_interval
 
         self.actor_target_model = clone_model(self.actor.model)
         self.actor_target_model.set_weights(self.actor.model.get_weights())
-
-        self.cirtic_target_model = clone_model(self.critic.model)
-        self.cirtic_target_model.set_weights(self.critic.model.get_weights())
+        self.critic_target_model = clone_model(self.critic.model)
+        self.critic_target_model.set_weights(self.critic.model.get_weights())
         
 
     def td_target(self, reward, next_state, done):
@@ -259,19 +260,36 @@ class AC2_Agent:
         return batch
 
     def load(self):
-        actor_model = load_model(f"models/A2C_actor_{self.model_name}.h5", custom_objects=self.custom_objects, compile=False)#, custom_objects=self.custom_objects, compile=False)
-        critic_model = load_model(f"models/A2C_critic_{self.model_name}.h5",  custom_objects=self.custom_objects, compile=False)
+        actor_opt_weights = np.load('models/A2C_actor_opt_weights.npy',allow_pickle=True)
+        critic_opt_weights = np.load('models/A2C_critic_opt_weights.npy',allow_pickle=True)
+        actor_model = load_model(f"models/A2C_actor_{self.model_name}.h5")#, custom_objects=self.custom_objects, compile=False)#, custom_objects=self.custom_objects, compile=False)
+        critic_model = load_model(f"models/A2C_critic_{self.model_name}.h5")#,  custom_objects=self.custom_objects, compile=False)
+        #print(f'loaded before weihgt : {actor_model.get_weights()}')
+
+        actor_grad_vars = actor_model.trainable_weights
+        critic_grad_vars = critic_model.trainable_weights
+
+        actor_zero_grads = [tf.zeros_like(w) for w in actor_grad_vars]
+        critic_zero_grads = [tf.zeros_like(w) for w in critic_grad_vars]
+
+        self.actor.opt.apply_gradients(zip(actor_zero_grads, actor_grad_vars))
+        self.critic.opt.apply_gradients(zip(critic_zero_grads, critic_grad_vars))
+
+        self.actor.opt.set_weights(actor_opt_weights)
+        self.critic.opt.set_weights(critic_opt_weights)
+        
         actor_model.compile(optimizer=self.actor.opt, loss=self.loss())
-        actor_model.compile(optimizer=self.actor.opt, loss=self.loss())
+        critic_model.compile(optimizer=self.critic.opt, loss=self.loss())
+        #print(f'loading {actor_model.get_weights()}')
         return actor_model,critic_model
 
-    def save(self, episode):
+    def save(self, actor,critic,episode):
         if self.model_name is None:
             self.model_name = f'{self.model_type}_{timestamp()}'
-        print(f'================={self.actor_target_model.get_weights()}=============')
-        print(f'================={self.critic.model.get_weights()}===============')
-        self.actor.model.save(f"models/A2C_actor_{self.model_name}.h5")
-        self.critic.model.save(f"models/A2C_critic_{self.model_name}.h5")
+        print(f'save================={actor.get_weights()}=============')
+        print(f'save================={critic.get_weights()}===============')
+        actor.save_weights(f"models/A2C_actor_{self.model_name}.h5")
+        critic.save_weights(f"models/A2C_critic_{self.model_name}.h5")
 
     def action(self, state, evaluation = False):
         if self.start:
@@ -283,7 +301,7 @@ class AC2_Agent:
         print(f' what is : {probs[0]}')
         #print(f'type is :{np.isnan(probs[0][0])}')
         if np.isnan(probs[0][0]) == True:
-            print(random.randrange(self.action_size))
+            #print(random.randrange(self.action_size))
             return  random.randrange(self.action_size)
             
         else:
@@ -292,7 +310,6 @@ class AC2_Agent:
           print(probs,"============== arg max : ",_action)
           return _action
         
-
 
 
 

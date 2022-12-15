@@ -2,9 +2,10 @@ import os
 import logging
 import numpy as np
 from tqdm import tqdm
-from utils import get_state, format_currency, format_position, normalize
+from src.utils import get_state, format_currency, format_position, normalize
 import pdb
 import streamlit as st
+import tensorflow as tf
 '''
 1. Move daily_pct_return to utils
 2. Move calc_reward to utils
@@ -210,10 +211,6 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
       reward = calc_reward(pct_change[t] * 100, net_holdings)
       total_profit += reward
 
-      #print(f'=========={agent.actor.model.get_weights()}==============')
-
-      #print(f'=========={agent.critic.model.get_weights()}==============')
-
       if not done:
         next_state = get_state(normed_data, t + 1)
         #st.write(next_state.shape) # (1,33)
@@ -225,8 +222,8 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
         td_target = agent.td_target(reward = reward * 0.01, next_state=next_state, done=done)
         advantage = advatnage(
           td_target, agent.critic.model.predict(state))
- 
-        
+
+
         state_batch.append(state)
         action_batch.append(action)
         td_target_batch.append(td_target)
@@ -238,17 +235,34 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
           loss = td_target
           average_loss.append(loss)
 
-      if episode % 2 == 0:
-          agent.save(episode)
-
       if done:
           states = list_to_batch(state_batch)
           actions = list_to_batch(action_batch)
           td_targets = list_to_batch(td_target_batch)
           advantages = list_to_batch(advatnage_batch)
 
-          actor_loss = agent.actor.train(states, actions, advantages)
-          critic_loss = agent.critic.train(states, td_targets)
+
+          with tf.GradientTape() as tape:
+              logits = agent.actor_target_model(states, training=True)
+              loss = agent.actor.compute_loss(
+                  actions, logits, advantages)
+          grads = tape.gradient(loss, agent.actor_target_model.trainable_variables)
+          agent.actor.opt.apply_gradients(zip(grads, agent.actor_target_model.trainable_variables))
+          actor_loss = loss
+
+          with tf.GradientTape() as tape:
+              v_pred = agent.critic_target_model(states, training=True)
+              assert v_pred.shape == td_targets.shape
+              loss = agent.critic.compute_loss(v_pred, tf.stop_gradient(td_targets))
+          grads = tape.gradient(loss, agent.critic_target_model.trainable_variables)
+          agent.critic.opt.apply_gradients(zip(grads, agent.critic_target_model.trainable_variables))
+          critic_loss = loss
+          
+          
+          if episode % 2 == 0:
+              np.save("models/A2C_actor_opt_weights.npy",agent.actor.opt.get_weights())
+              np.save("models/A2C_critic_opt_weights.npy",agent.critic.opt.get_weights())
+              agent.save(episode,agent.actor_target_model,agent.critic_target_model)          
 
           state_batch = []
           action_batch = []
@@ -257,7 +271,10 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
 
           #return (episode, episode_count, total_profit)
 
-          return (episode, episode_count, total_profit, np.array(average_loss).mean())
+          return (episode, episode_count, total_profit, np.array(actor_loss+critic_loss).mean())
+
+
+
 
 def evaluate_model_A2C(agent, data, verbose, window_size = 10):
   total_profit = 0
@@ -278,11 +295,8 @@ def evaluate_model_A2C(agent, data, verbose, window_size = 10):
 
 
     state = get_state(normed_data, t)
-    print(f'================ {normed_data} =============')
-    
-    print(f'================ {state} =============')
     action = agent.action(state, evaluation = True)
-  
+    print(f' eval : {agent.actor_target_model.get_weights()}')
 
     if action == 2 and net_holdings == 0:
       shares = -10
@@ -315,4 +329,5 @@ def evaluate_model_A2C(agent, data, verbose, window_size = 10):
         state = next_state
 
     if done: return total_profit, history, shares_history
+
 

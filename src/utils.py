@@ -7,7 +7,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-from technical_indicators import (
+from src.technical_indicators import (
   indicators_dict,
   add_momentum_indicators,
   add_trend_indicators,
@@ -191,6 +191,39 @@ def plot_benchmark(baseline_results, heuristic_results, model_results):
     y=model_results.Port_Vals / model_results.Port_Vals[0],
     mode="lines",
     name="DDQN",
+  ))
+  fig.update_layout(title='Benchmark',
+    xaxis_title='<b>Date</b>',
+    yaxis_title='<b>Normalized Portfolio Value ($)</b>',
+    template='plotly_white'
+  )
+  return fig
+
+def plot_benchmark_A2C_DDQN( heuristic_results, ddqn_results,a2c_results,baseline_results=None):
+  fig = go.Figure()
+  #fig.add_trace(go.Line(
+  #  x=baseline_results.index,
+  #  y=baseline_results.Port_Vals / baseline_results.Port_Vals[0],
+  #  mode="lines",
+  #  name="Baseline",
+  #))
+  fig.add_trace(go.Line(
+    x=baseline_results.index,
+    y=heuristic_results.Port_Vals / heuristic_results.Port_Vals[0],
+    mode="lines",
+    name="Heuristic",
+  ))
+  fig.add_trace(go.Line(
+    x=baseline_results.index,
+    y=ddqn_results.Port_Vals / ddqn_results.Port_Vals[0],
+    mode="lines",
+    name="DDQN",
+  ))
+  fig.add_trace(go.Line(
+    x=baseline_results.index,
+    y=a2c_results.Port_Vals / a2c_results.Port_Vals[0],
+    mode="lines",
+    name="A2C",
   ))
   fig.update_layout(title='Benchmark',
     xaxis_title='<b>Date</b>',
