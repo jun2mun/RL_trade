@@ -8,7 +8,7 @@ import keras.backend as K
 from agent import Agent,AC2_Agent
 
 from methods import train_model, evaluate_model, train_model_A2C, evaluate_model_A2C
-from utils import load_data, add_technical_features, show_training_result
+from utils.utils import load_data, add_technical_features, show_training_result
 
 
 def run(training_stock, validation_stock, window_size, batch_size, episode_count, model_type="ddqn", model_name = None, pretrained = False, verbose = False):

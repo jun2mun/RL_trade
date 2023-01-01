@@ -6,7 +6,7 @@ import coloredlogs
 
 from agent import Agent,AC2_Agent
 from methods import evaluate_model,evaluate_model_A2C
-from utils import add_technical_features, load_data, show_evaluation_result
+from utils.utils import add_technical_features, load_data, show_evaluation_result
 import keras.backend as K
 
 

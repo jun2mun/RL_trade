@@ -16,7 +16,7 @@ parser.add_argument('--critic_lr', type=float, default=0.001)
 
 args = parser.parse_args()
 
-from src.utils import timestamp
+from utils.utils import timestamp
 
 
 class Actor:

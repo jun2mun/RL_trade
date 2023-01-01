@@ -10,7 +10,7 @@ from keras.optimizers import Adam
 #from keras.saving.save import load_model tf 2.0.0
 from keras.models import load_model # tf 2.11.0
 
-from src.utils import timestamp
+from src.utils.utils import timestamp
 import math
 
 class Agent:

@@ -4,21 +4,22 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-from src.BaselineModel import BaselineModel
-from src.HeuristicTrader import HeuristicTrader
-from src.methods import evaluate_model,evaluate_model_A2C,train_model_A2C,train_model
+from src.models.BaselineModel import BaselineModel
+from src.models.HeuristicTrader import HeuristicTrader
+from src.methods.methods import evaluate_model,evaluate_model_A2C,train_model_A2C,train_model
 from src.agent import Agent,AC2_Agent
-from src.utils import add_technical_features, load_data, results_df, plot_trades, get_portfolio_stats, plot_benchmark, \
-  plot_benchmark2, load_data2,plot_benchmark_A2C_DDQN
+from src.utils.utils import add_technical_features, load_data, results_df, plot_trades, get_portfolio_stats, plot_benchmark, \
+  plot_benchmark2,plot_benchmark_A2C_DDQN
 
-@st.cache
+@st.cache # TODO 삭제 예정(Deprecated)
 def load_data_2(symbol, window_size):
-  data_ = add_technical_features(load_data2(symbol), window=window_size).sort_values(by=['Date'], ascending=True)
-  return data_
+  #data_ = add_technical_features(load_data2(symbol), window=window_size).sort_values(by=['Date'], ascending=True)
+  #return data_
+  return
 
 @st.cache
-def load_data_(symbol, window_size):
-  data_ = add_technical_features(load_data(f'data/{symbol}.csv'), window=window_size).sort_values(by=['Date'], ascending=True)
+def load_preprocessed_data_(symbol, window_size):
+  data_ = add_technical_features(load_data(symbol), window=window_size).sort_values(by=['Date'], ascending=True)
   return data_
 
 @st.cache
@@ -28,17 +29,22 @@ def filter_data_by_date(data, start_date, end_date):
   """
   return data[start_date:end_date].dropna()
 
-def load_model(state_size, model_name):
+def load_model(state_size, model_name,pretrained=False):
   """
   학습 모델 Agent 호출
+  1. 훈련된 모델
+  2. 훈련되지 않은 모델
   """
-  return Agent(state_size = window_size, pretrained = True, model_name = model_name)
+  return Agent(state_size = window_size, pretrained=pretrained, model_name = model_name)
 
 def evaluate(agent, test_data, window_size, verbose = True):
   result, history, shares = evaluate_model(agent, test_data, window_size, verbose)
   return result, history, shares
 
 def sidebar(index):
+  '''
+  사이드 바
+  '''
   start_date = st.sidebar.date_input('Start', index[0], min_value=index[0])
   end_date = st.sidebar.date_input('End', index[-1], max_value=index[-1])
   window_size = st.sidebar.slider('Window Size', 1, 30, 10)
@@ -63,12 +69,13 @@ st.title('DeepRL Trader')
 st.header("DDQN 강화학습 모델 이용한 최적의 투자 전략 생성")
 st.subheader('2022년 2학기 데이터분석캡스톤디자인 - F팀')
 
-symbols = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM','JNJ', 'NFLX', 'SPY', 'TSLA']
+symbols = ['AAPL', 'AMZN', 'FB', 'GOOG', 'IBM','JNJ', 'NFLX', 'SPY', 'TSLA', 'RITM'] # TODO DB로 전환 필요.
 symbol = st.sidebar.selectbox('Stock Symbol:', symbols)
 
-index = load_data_(symbol, 10).index
+index = load_preprocessed_data_(symbol, 10).index
 start_date, end_date, window_size = sidebar(index)
-submit = st.sidebar.button('Run')
+
+predict = st.sidebar.button('예측')
 submit2 = st.sidebar.button('Test')
 submit3 = st.sidebar.button('jun-ac2 train')
 submit4 = st.sidebar.button('jun-ac2 test')
@@ -78,7 +85,7 @@ submit4 = st.sidebar.button('jun-ac2 test')
 if submit4:
 
   model_name = 'test'#symbol
-  training_data = load_data_(symbol,window_size)
+  training_data = load_preprocessed_data_(symbol,window_size)
   filtered_data = filter_data_by_date(training_data, start_date, end_date)
   num_features = training_data.shape[1]
   
@@ -162,7 +169,7 @@ if submit3: # jun ac2 train
 
 if submit2: #TEST
   model_name = symbol # 주식
-  data = load_data_2(symbol, window_size)
+  data = load_preprocessed_data_2(symbol, window_size)
   filtered_data = filter_data_by_date(data, start_date, end_date)
 
   agent = load_model(filtered_data.shape[1], model_name = model_name)
@@ -226,16 +233,18 @@ if submit2: #TEST
   st.subheader('Heuristic')
   st.write(heuristic_results)
 
-if submit: #TEST
-  model_name = symbol
-  data = load_data_(symbol, window_size)
-  filtered_data = filter_data_by_date(data, start_date, end_date)
+if predict: # 학습된 모델이 있는 경우 예측 하는 기능
+  
+  model_name = symbol # 1. 선택한 종목 model_name으로 저장
+  data = load_preprocessed_data_(symbol, window_size) # 2. 기술적 지표 포함된 전처리된 데이터 로드
+  filtered_data = filter_data_by_date(data, start_date, end_date) # 3. 데이터 결측치 제거
+  agent = load_model(filtered_data.shape[1], model_name = model_name, pretrained=True) # 4. 훈련된 모델 로드 (훈련된 => pretrained = True)
 
-  agent = load_model(filtered_data.shape[1], model_name = model_name)
-  profit, history, shares = evaluate(agent, filtered_data, window_size = window_size, verbose = False)
-  results = results_df(filtered_data.price, shares, starting_value = 1_000)
-  cum_return, avg_daily_returns, std_daily_returns, sharpe_ratio = get_portfolio_stats(results.Port_Vals)
+  profit, history, shares = evaluate(agent, filtered_data, window_size = window_size, verbose = False) # 5. 훈련된 모델로 평가 진행 
+  results = results_df(filtered_data.price, shares, starting_value = 1_000) # 6. 결과 값 pandas dataframe 형식으로 반환
+  cum_return, avg_daily_returns, std_daily_returns, sharpe_ratio = get_portfolio_stats(results.Port_Vals) # 7. 6번 바탕으로 평가 지표 반환
 
+  ## 시각화 ##
   st.write(f'### Cumulative Return for {symbol}: {np.around(cum_return * 100, 2)}%')
-  fig = plot_trades(filtered_data, results.Shares, symbol)
+  fig = plot_trades(filtered_data, results.Shares, symbol) # 8. 시각화 함수
   st.plotly_chart(fig)

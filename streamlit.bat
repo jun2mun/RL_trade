@@ -1,6 +1,6 @@
 @Echo off
 
-cd C:\Users\owner\Desktop\junbeom\RL_trade
+cd C:\Users\owner\Desktop\portfolio\RL_trade
 call C:\Users\owner\anaconda3\Scripts\activate.bat C:\Users\owner\anaconda3
 call conda activate RLtrader
 

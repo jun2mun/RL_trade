@@ -2,7 +2,7 @@ import os
 import logging
 import numpy as np
 from tqdm import tqdm
-from src.utils import get_state, format_currency, format_position, normalize
+from src.utils.utils import get_state, format_currency, format_position, normalize
 import pdb
 import streamlit as st
 import tensorflow as tf

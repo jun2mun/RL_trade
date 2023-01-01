@@ -52,47 +52,43 @@ def get_stock_data(stock_file):
   df = pd.read_csv(stock_file)
   return list(df['Adj Close'])
 
-def load_data(path):
-  temp = pd.read_csv(path)
-
-  if "Date" in temp.columns:
-      temp.index = temp["Date"]
-      temp.index = pd.to_datetime(temp.index, infer_datetime_format=True)
-      temp.drop('Date', axis = 1, inplace = True)
-      temp.rename(columns={f'Adj Close': 'adjusted_close'}, inplace=True)
-      temp.columns = map(str.lower, temp.columns)
-  else:
-      temp.index = temp['timestamp']
-      temp.index = pd.to_datetime(temp.index, infer_datetime_format=True)
-      temp.index.name = 'Date'
-      temp.drop('timestamp', axis = 1, inplace = True)
-
-  temp = temp.loc[:, ['adjusted_close', 'high', 'close', 'open', 'low', 'volume']]
-  return temp
-
-def load_data2(symbol):
+def load_data(symbol,pretrained=False):
+  path = f'data/{symbol}.csv'
   """
-  yahoo finance loading utils
+  method : default(csv)
+  가능한 load 방법
+  1. csv
+  2. yahoo_api
   """
-  data = yf.download(symbol)
 
-  data.rename(columns={f'Adj Close': 'adjusted_close'}, inplace=True)
-  data.columns = map(str.lower, data.columns)
+  try:
+    temp = pd.read_csv(path)
 
-  # if "Date" in data.columns:
-  #     data.index = data["Date"]
-  #     data.index = pd.to_datetime(data.index, infer_datetime_format=True)
-  #     data.drop('Date', axis = 1, inplace = True)
-  #
-  # else:
-  #     data.index = data['timestamp']
-  #     data.index = pd.to_datetime(data.index, infer_datetime_format=True)
-  #     data.index.name = 'Date'
-  #     data.drop('timestamp', axis = 1, inplace = True)
+    if "Date" in temp.columns:
+        temp.index = temp["Date"]
+        temp.index = pd.to_datetime(temp.index, infer_datetime_format=True)
+        temp.drop('Date', axis = 1, inplace = True)
+        temp.rename(columns={f'Adj Close': 'adjusted_close'}, inplace=True)
+        temp.columns = map(str.lower, temp.columns)
+    else:
+        temp.index = temp['timestamp']
+        temp.index = pd.to_datetime(temp.index, infer_datetime_format=True)
+        temp.index.name = 'Date'
+        temp.drop('timestamp', axis = 1, inplace = True)
 
-  data = data.loc[:, ['adjusted_close', 'high', 'close', 'open', 'low', 'volume']]
-  return data
+    temp = temp.loc[:, ['adjusted_close', 'high', 'close', 'open', 'low', 'volume']]
+    print("csv used")
+    return temp
 
+  except:
+    data = yf.download(symbol)
+
+    data.rename(columns={f'Adj Close': 'adjusted_close'}, inplace=True)
+    data.columns = map(str.lower, data.columns)
+
+    data = data.loc[:, ['adjusted_close', 'high', 'close', 'open', 'low', 'volume']]
+    print("api used")
+    return data
 
 def add_technical_features(data, window, fillna = True):
   """
