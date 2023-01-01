@@ -241,17 +241,13 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
           td_targets = list_to_batch(td_target_batch)
           advantages = list_to_batch(advatnage_batch)
 
+
           with tf.GradientTape() as tape:
               logits = agent.actor_target_model(states, training=True)
-              tf.where(tf.is_nan(logits), tf.zeros_like(logits), logits).eval()
-              print('1번',logits)
               loss = agent.actor.compute_loss(
                   actions, logits, advantages)
-              print('2번',loss)
-              print('2번',agent.actor_target_model.trainable_weights)
           grads = tape.gradient(loss, agent.actor_target_model.trainable_variables)
           agent.actor.opt.apply_gradients(zip(grads, agent.actor_target_model.trainable_variables))
-          print('2번',agent.actor_target_model.trainable_variables)
           actor_loss = loss
 
           with tf.GradientTape() as tape:
@@ -262,13 +258,11 @@ def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, w
           agent.critic.opt.apply_gradients(zip(grads, agent.critic_target_model.trainable_variables))
           critic_loss = loss
           
-          print('3번',agent.actor_target_model.trainable_variables)
-
-          if episode % 1 == 0:
-              #np.save("models/A2C_actor_opt_weights.npy",agent.actor.opt.get_weights())
-              #np.save("models/A2C_critic_opt_weights.npy",agent.critic.opt.get_weights())
-              print("========================= Saving ============================")
-              agent.save(agent.actor_target_model,agent.critic_target_model,episode)          
+          
+          if episode % 2 == 0:
+              np.save("models/A2C_actor_opt_weights.npy",agent.actor.opt.get_weights())
+              np.save("models/A2C_critic_opt_weights.npy",agent.critic.opt.get_weights())
+              agent.save(episode,agent.actor_target_model,agent.critic_target_model)          
 
           state_batch = []
           action_batch = []
@@ -302,7 +296,7 @@ def evaluate_model_A2C(agent, data, verbose, window_size = 10):
 
     state = get_state(normed_data, t)
     action = agent.action(state, evaluation = True)
-    #print(f' eval : {agent.actor_target_model.get_weights()}')
+    print(f' eval : {agent.actor_target_model.get_weights()}')
 
     if action == 2 and net_holdings == 0:
       shares = -10

@@ -158,18 +158,15 @@ class Actor:
         model.add(Dense(units=32, activation="relu", input_shape=(self.state_dim,)))
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=self.action_dim,activation='softmax'))
-        #model.compile(optimizer=self.opt, loss=self.loss())
+        model.compile(optimizer=self.opt, loss=self.loss())
         return model
 
     def compute_loss(self, actions, logits, advantages):
         ce_loss = tf.keras.losses.SparseCategoricalCrossentropy(
             from_logits=True)
-        print(f'ce loss {ce_loss}')
         actions = tf.cast(actions, tf.int32)
-        print(f'actions {actions}')
         policy_loss = ce_loss(
             actions, logits, sample_weight=tf.stop_gradient(advantages))
-        print(f'policy_loss {policy_loss}')
         return policy_loss
 
     def train(self, states, actions, advantages):
@@ -195,7 +192,7 @@ class Critic:
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=16, activation="relu"))
         model.add(Dense(units=1,activation='linear'))
-        #model.compile(optimizer=self.opt, loss=self.loss())
+        model.compile(optimizer=self.opt, loss=self.loss())
         #model.compile(optimizer=tf.keras.optimizers.Adam(lr =0.001),loss=Huber)
         return model
 
@@ -232,7 +229,7 @@ class AC2_Agent:
         
         if pretrained and self.model_name is not None:
             print("model loaded -================")
-            #self.actor.model,self.critic.model = self.load()
+            self.actor.model,self.critic.model = self.load()
             #print(f'loaded weihgt : {self.actor_model.get_weights()}')
             print("========================================")
           
@@ -263,12 +260,12 @@ class AC2_Agent:
         return batch
 
     def load(self):
-        #actor_opt_weights = np.load('models/A2C_actor_opt_weights.npy',allow_pickle=True)
-        #critic_opt_weights = np.load('models/A2C_critic_opt_weights.npy',allow_pickle=True)
+        actor_opt_weights = np.load('models/A2C_actor_opt_weights.npy',allow_pickle=True)
+        critic_opt_weights = np.load('models/A2C_critic_opt_weights.npy',allow_pickle=True)
         actor_model = load_model(f"models/A2C_actor_{self.model_name}.h5")#, custom_objects=self.custom_objects, compile=False)#, custom_objects=self.custom_objects, compile=False)
         critic_model = load_model(f"models/A2C_critic_{self.model_name}.h5")#,  custom_objects=self.custom_objects, compile=False)
-        print(f'loaded before weihgt : {actor_model.get_weights()}')
-        '''
+        #print(f'loaded before weihgt : {actor_model.get_weights()}')
+
         actor_grad_vars = actor_model.trainable_weights
         critic_grad_vars = critic_model.trainable_weights
 
@@ -280,11 +277,9 @@ class AC2_Agent:
 
         self.actor.opt.set_weights(actor_opt_weights)
         self.critic.opt.set_weights(critic_opt_weights)
-        '''
+        
         actor_model.compile(optimizer=self.actor.opt, loss=self.loss())
         critic_model.compile(optimizer=self.critic.opt, loss=self.loss())
-
-
         #print(f'loading {actor_model.get_weights()}')
         return actor_model,critic_model
 
@@ -293,8 +288,8 @@ class AC2_Agent:
             self.model_name = f'{self.model_type}_{timestamp()}'
         print(f'save================={actor.get_weights()}=============')
         print(f'save================={critic.get_weights()}===============')
-        actor.save(f"models/A2C_actor_{self.model_name}")
-        critic.save(f"models/A2C_critic_{self.model_name}")
+        actor.save_weights(f"models/A2C_actor_{self.model_name}.h5")
+        critic.save_weights(f"models/A2C_critic_{self.model_name}.h5")
 
     def action(self, state, evaluation = False):
         if self.start:
