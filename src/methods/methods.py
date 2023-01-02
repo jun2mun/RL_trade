@@ -96,79 +96,106 @@ def train_model(agent, episode, data, episode_count = 50, batch_size = 32, windo
     if done: return (episode, episode_count, total_profit, np.array(average_loss).mean())
 
 def evaluate_model(agent, data, verbose, window_size = 10):
-  total_profit = 0
-  num_observations = len(data)
 
-  shares = []
-  history = []
-  agent.inventory = []
-  normed_data = normalize(data)
-  cum_return = []
-  net_holdings = 0
-  shares_history = []
-  pct_change = daily_pct_change(data.price, 10)
+  # environment - method - agent 분리
+  if True:
+    from src.environment.DDQN import DDQN_env
 
-  for t in range(num_observations):
-    done = t == (num_observations - 1)
-    reward = 0
+    normed_data = normalize(data)
+    env = DDQN_env(data)
+    total_profit = 0
+    history = []
+    shares_history = []
+    timestep = 0
+    while True:
+      action = agent.action(get_state(normed_data,timestep), evaluation = True)
+      state, reward, done = env.step(action)
+      total_profit += reward
+      history.append(state[0])
+      shares_history.append(state[1])
+      if done == True:
+          return total_profit, history, shares_history
+
+      else:
+          agent.memory.append((get_state(normed_data, timestep), action,reward, get_state(data, timestep+1),done))
+      
+      timestep +=1
+
+  # method(env) + agent 버전 (deprecated)
+  if False:
+    total_profit = 0
+    num_observations = len(data)
+
+    shares = []
+    history = []
+    agent.inventory = []
+    normed_data = normalize(data)
+    cum_return = []
+    net_holdings = 0
+    shares_history = []
+    pct_change = daily_pct_change(data.price, 10)
+
+    for t in range(num_observations):
+      done = t == (num_observations - 1)
+      reward = 0
 
 
-    state = get_state(normed_data, t)
-    action = agent.action(state, evaluation = True)
+      state = get_state(normed_data, t)
+      action = agent.action(state, evaluation = True)
 
-    if action == 2 and net_holdings == 0:
-      shares = -10
-      net_holdings += -10
-      history.append((data.price[t], "SELL"))
-    elif action == 2 and net_holdings == 10:
-      shares = -20
-      net_holdings += -20
-      history.append((data.price[t], "SELL"))
-    elif action == 1 and net_holdings == 0:
-      shares = 10
-      net_holdings += 10
-      history.append((data.price[t], "BUY"))
-    elif action == 1 and net_holdings == -10:
-      shares = 20
-      net_holdings += 20
-      history.append((data.price[t], "BUY"))
-    else:
-      shares = 0
-      history.append((data.price[t], "HOLD"))
-    shares_history.append(shares)
+      if action == 2 and net_holdings == 0:
+        shares = -10
+        net_holdings += -10
+        history.append((data.price[t], "SELL"))
+      elif action == 2 and net_holdings == 10:
+        shares = -20
+        net_holdings += -20
+        history.append((data.price[t], "SELL"))
+      elif action == 1 and net_holdings == 0:
+        shares = 10
+        net_holdings += 10
+        history.append((data.price[t], "BUY"))
+      elif action == 1 and net_holdings == -10:
+        shares = 20
+        net_holdings += 20
+        history.append((data.price[t], "BUY"))
+      else:
+        shares = 0
+        history.append((data.price[t], "HOLD"))
+      shares_history.append(shares)
 
-    reward = calc_reward(pct_change[t], net_holdings)
-    total_profit += reward
-    # if action == 1:
-    #   agent.inventory.append(data.price[t])
-    #   shares.append(1)
-    #   history.append((data.price[t], "BUY"))
+      reward = calc_reward(pct_change[t], net_holdings)
+      total_profit += reward
+      # if action == 1:
+      #   agent.inventory.append(data.price[t])
+      #   shares.append(1)
+      #   history.append((data.price[t], "BUY"))
 
-    #   if verbose:
-    #     logging.debug(f"Buy at: {format_currency(data.price[t])}")
+      #   if verbose:
+      #     logging.debug(f"Buy at: {format_currency(data.price[t])}")
 
-    # elif action == 2 and len(agent.inventory) > 0:
-    #   purchase_price = agent.inventory.pop(0)
-    #   delta = data.price[t] - purchase_price
-    #   reward = delta
-    #   total_profit += delta
-    #   shares.append(-1)
-    #   history.append((data.price[t], "SELL"))
+      # elif action == 2 and len(agent.inventory) > 0:
+      #   purchase_price = agent.inventory.pop(0)
+      #   delta = data.price[t] - purchase_price
+      #   reward = delta
+      #   total_profit += delta
+      #   shares.append(-1)
+      #   history.append((data.price[t], "SELL"))
 
-    #   if verbose:
-    #     logging.debug(f"Sell at: {format_currency(data.price[t])} | Position: {format_position(data.price[t] - purchase_price)}")
+      #   if verbose:
+      #     logging.debug(f"Sell at: {format_currency(data.price[t])} | Position: {format_position(data.price[t] - purchase_price)}")
 
-    # else:
-    #   history.append((data.price[t], "HOLD"))
-    #   shares.append(0)
-    # cum_return.append(total_profit)
+      # else:
+      #   history.append((data.price[t], "HOLD"))
+      #   shares.append(0)
+      # cum_return.append(total_profit)
 
-    if not done:
-      next_state = get_state(normed_data, t + 1)
-      agent.memory.append((state, action, reward, next_state, done))
-      state = next_state
+      if not done:
+        next_state = get_state(normed_data, t + 1)
+        agent.memory.append((state, action, reward, next_state, done))
+        state = next_state
 
-    if done: return total_profit, history, shares_history
+      if done: return total_profit, history, shares_history
 
 #####  수정중
 def train_model_A2C(agent, episode, data, episode_count = 50, batch_size = 32, window_size = 10):
